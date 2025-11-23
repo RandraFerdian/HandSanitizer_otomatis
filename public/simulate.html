@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Simulator + Time Travel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+            color: white;
+        }
+
+        /* Custom Date Input Dark Mode */
+        input[type="datetime-local"] {
+            color-scheme: dark;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col items-center justify-center p-4 gap-6">
+
+    <div class="w-full max-w-md bg-gray-800 rounded-3xl shadow-2xl border border-gray-700 overflow-hidden">
+
+        <div class="bg-gray-900 p-6 border-b border-gray-700 flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold text-purple-400 flex items-center gap-2">
+                    <i class="ph-fill ph-clock-afternoon"></i> Time Travel ESP32
+                </h1>
+                <p class="text-gray-500 text-xs mt-1">Device ID: esp32-01</p>
+            </div>
+            <div class="flex items-center gap-2 px-3 py-1 bg-green-900/30 border border-green-800 rounded-full">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-xs text-green-500 font-bold">Connected</span>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-6">
+
+            <div class="bg-purple-900/20 p-4 rounded-2xl border border-purple-500/30">
+                <label class="text-xs font-bold text-purple-300 uppercase mb-2 block">Simulasi Waktu Kejadian</label>
+                <div class="flex gap-2">
+                    <input type="datetime-local" id="simTime"
+                        class="w-full bg-gray-900 border border-gray-600 text-white rounded-xl px-4 py-2 focus:outline-none focus:border-purple-500 transition">
+                    <button onclick="resetTime()"
+                        class="bg-gray-700 hover:bg-gray-600 px-4 rounded-xl text-xs font-bold text-gray-300"
+                        title="Reset to Now">NOW</button>
+                </div>
+                <p class="text-[10px] text-gray-500 mt-2">*Data akan disimpan di database sesuai tanggal ini.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-900/50 p-3 rounded-2xl border border-gray-700">
+                    <span class="text-gray-400 text-xs block mb-1">Level Cairan</span>
+                    <span id="simLevel" class="font-bold text-white text-xl">100%</span>
+                    <div class="h-2 w-full bg-gray-700 rounded-full mt-2 overflow-hidden">
+                        <div id="simBar" class="h-full bg-blue-500 w-full transition-all duration-300"></div>
+                    </div>
+                </div>
+                <div class="bg-gray-900/50 p-3 rounded-2xl border border-gray-700 flex flex-col justify-center">
+                    <span class="text-gray-400 text-xs block mb-1">Total Usage</span>
+                    <span id="simCount" class="font-mono text-2xl font-bold text-yellow-400">0</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="actionUsage()"
+                    class="col-span-2 bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-lg shadow-blue-900/20">
+                    <i class="ph-bold ph-hand-tap text-xl"></i>
+                    Simulasi Orang Pakai
+                </button>
+
+                <button onclick="actionTheft()"
+                    class="bg-red-900/30 hover:bg-red-900/50 border border-red-800/50 text-red-400 p-3 rounded-xl font-bold text-sm flex flex-col items-center gap-1 transition active:scale-95">
+                    <i class="ph-bold ph-mask-happy text-xl"></i> Force Anomali
+                </button>
+
+                <button onclick="actionRefill()"
+                    class="bg-green-900/30 hover:bg-green-900/50 border border-green-800/50 text-green-400 p-3 rounded-xl font-bold text-sm flex flex-col items-center gap-1 transition active:scale-95">
+                    <i class="ph-bold ph-arrows-clockwise text-xl"></i> Refill Penuh
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div
+        class="w-full max-w-md bg-gray-800 rounded-3xl shadow-2xl border border-gray-700 overflow-hidden flex flex-col h-64">
+        <div class="bg-gray-900 px-6 py-3 border-b border-gray-700">
+            <h3 class="text-sm font-bold text-gray-300 flex items-center gap-2">
+                <i class="ph-bold ph-list-dashes"></i> Log Aktivitas
+            </h3>
+        </div>
+        <div class="flex-1 overflow-y-auto p-0">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-gray-900/50 text-gray-500 uppercase sticky top-0">
+                    <tr>
+                        <th class="px-6 py-2">Waktu Sim</th>
+                        <th class="px-2 py-2">Event</th>
+                        <th class="px-2 py-2 text-right">Data</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody" class="divide-y divide-gray-700 text-gray-300"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let currentLevel = 100.0;
+        let currentCount = 0;
+
+        // Set Default Time ke NOW
+        function resetTime() {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); // Adjust Timezone
+            document.getElementById('simTime').value = now.toISOString().slice(0, 16);
+        }
+        resetTime(); // Panggil saat start
+
+        async function syncInitialState() {
+            try {
+                const res = await fetch('/api/get_latest');
+                const data = await res.json();
+                currentLevel = parseFloat(data.sisa_cairan || 100);
+                currentCount = parseInt(data.jumlah_pakai || 0);
+                updateUI();
+            } catch (e) { }
+        }
+
+        // --- AKSI ---
+        function actionUsage() {
+            if (currentLevel > 0) {
+                currentLevel -= 0.5;
+                if (currentLevel < 0) currentLevel = 0;
+                currentCount += 1;
+                sendData('Normal Usage');
+            }
+        }
+
+        function actionTheft() {
+            if (currentLevel > 10) {
+                currentLevel -= 10.0;
+                sendData('Anomaly/Theft');
+            }
+        }
+
+        function actionRefill() {
+            currentLevel = 100.0;
+            sendData('Refill');
+        }
+
+        // --- KIRIM DATA + WAKTU ---
+        async function sendData(eventType) {
+            updateUI();
+
+            // Ambil Waktu dari Input
+            const customDate = document.getElementById('simTime').value;
+
+            const payload = {
+                sisa: parseFloat(currentLevel.toFixed(2)),
+                count: currentCount,
+                custom_date: customDate // Kirim tanggal palsu ke server
+            };
+
+            try {
+                const res = await fetch('/api/save_data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+
+                if (result.status === 'success') {
+                    addLog(eventType, customDate, `L:${currentLevel.toFixed(1)}% | C:${currentCount}`);
+                }
+            } catch (e) { console.log(e); }
+        }
+
+        function updateUI() {
+            document.getElementById('simLevel').innerText = currentLevel.toFixed(1) + "%";
+            document.getElementById('simCount').innerText = currentCount;
+            document.getElementById('simBar').style.width = currentLevel + "%";
+        }
+
+        function addLog(type, timeStr, details) {
+            const tbody = document.getElementById('logTableBody');
+            const dateObj = new Date(timeStr);
+            const displayTime = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) + ', ' + dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+            let badgeColor = 'bg-gray-700 text-gray-300';
+            if (type.includes('Usage')) badgeColor = 'bg-blue-900 text-blue-200';
+            if (type.includes('Anomaly')) badgeColor = 'bg-red-900 text-red-200';
+            if (type.includes('Refill')) badgeColor = 'bg-green-900 text-green-200';
+
+            const row = `
+                <tr class="hover:bg-gray-700/50 transition">
+                    <td class="px-6 py-3 font-mono text-yellow-500">${displayTime}</td>
+                    <td class="px-2 py-3"><span class="px-2 py-1 rounded-md text-[10px] font-bold ${badgeColor}">${type}</span></td>
+                    <td class="px-2 py-3 text-right font-mono text-xs text-gray-400">${details}</td>
+                </tr>`;
+            tbody.insertAdjacentHTML('afterbegin', row);
+        }
+
+        syncInitialState();
+    </script>
+</body>
+
+</html>
