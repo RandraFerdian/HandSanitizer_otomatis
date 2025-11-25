@@ -1,288 +1,223 @@
 <!DOCTYPE html>
-<html lang="id" class="light">
+<html lang="id">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Sanitizer Dashboard Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Monitor</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <script> tailwind.config = { darkMode: 'class' } </script>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] },
+                    colors: { primary: '#3B82F6', bg: '#F1F5F9' }
+                }
+            }
+        }
+    </script>
+    <style>
+        .progress-ring {
+            background: conic-gradient(var(--color) calc(var(--percent) * 1%), #E2E8F0 0);
+            transition: background 0.5s ease;
+        }
+
+        /* Fix untuk tampilan mobile agar tidak goyang */
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
 </head>
 
-<body class="font-['Inter'] text-gray-900 dark:text-gray-100 transition-colors duration-500 antialiased">
+<body class="bg-bg text-slate-800 min-h-screen py-6 px-4 sm:py-10 sm:px-8 flex flex-col">
 
-    <div id="backdrop" class="backdrop" onclick="toggleHistory(false)"></div>
+    <div class="max-w-5xl w-full mx-auto space-y-6 sm:space-y-8">
 
-    <div class="min-h-screen flex justify-center p-6 md:p-12">
-        <div class="w-full max-w-md md:max-w-6xl transition-all duration-500 pb-32 md:pb-0">
-
-            <div class="hidden md:flex justify-between items-end mb-10">
-                <div>
-                    <h1 class="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">Dashboard</h1>
-                    <p class="text-gray-500 dark:text-gray-400 text-base mt-1 font-medium">Overview status perangkat</p>
-                </div>
-                <div class="flex items-center gap-4">
-                    <button onclick="openSettings()"
-                        class="p-3 rounded-full apple-card hover:bg-white/50 dark:hover:bg-gray-800/50 transition active:scale-95 text-gray-600 dark:text-gray-300">
-                        <i class="ph-fill ph-gear text-xl"></i>
-                    </button>
-
-                    <button onclick="toggleDarkMode()"
-                        class="p-3 rounded-full apple-card hover:bg-white/50 dark:hover:bg-gray-800/50 transition active:scale-95">
-                        <i id="themeIcon" class="ph-fill ph-moon text-xl text-gray-600 dark:text-yellow-400"></i>
-                    </button>
-
-                    <div class="apple-card px-4 py-2.5 rounded-full flex items-center gap-2.5">
-                        <div
-                            class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]">
-                        </div>
-                        <span class="text-sm font-semibold text-gray-700 dark:text-gray-200">Online</span>
-                    </div>
-                </div>
+        <div
+            class="flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left bg-white p-4 rounded-2xl shadow-sm sm:bg-transparent sm:shadow-none sm:p-0">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-slate-900">Dashboard</h1>
+                <p class="text-slate-500 text-xs sm:text-sm mt-1">Monitoring Hand Sanitizer</p>
             </div>
 
-            <div class="flex md:hidden justify-between items-end mb-8 mt-4">
-                <div>
-                    <h1 class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">Device 01</h1>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm font-medium mt-0.5">Lobby Utama</p>
-                </div>
-                <div class="flex gap-3">
-                    <button onclick="openSettings()"
-                        class="apple-card p-3 rounded-full active:scale-95 transition text-gray-600 dark:text-gray-300">
-                        <i class="ph-fill ph-gear text-xl"></i>
-                    </button>
-
-                    <button onclick="toggleDarkMode()" class="apple-card p-3 rounded-full active:scale-95 transition">
-                        <i id="themeIconMobile" class="ph-fill ph-moon text-xl text-gray-600 dark:text-yellow-400"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8">
-
-                <div class="md:col-span-2 space-y-5 md:space-y-8">
-
-                    <div
-                        class="apple-card p-8 relative overflow-hidden group transition-all duration-500 hover:shadow-lg dark:hover:shadow-gray-900/30">
-                        <div
-                            class="absolute top-0 right-0 p-6 opacity-[0.05] dark:opacity-[0.03] group-hover:opacity-[0.1] transition-opacity z-0 pointer-events-none">
-                            <i class="ph-light ph-drop text-9xl text-blue-600 dark:text-blue-400"></i>
-                        </div>
-
-                        <div class="relative z-10">
-                            <span
-                                class="text-[11px] font-bold uppercase text-gray-500 dark:text-gray-400 tracking-widest">Sisa
-                                Cairan</span>
-                            <div class="flex items-baseline gap-2 mt-1 mb-4">
-                                <span id="valSisa"
-                                    class="text-6xl md:text-8xl font-extrabold text-gray-900 dark:text-white tracking-tight">--%</span>
-                            </div>
-                        </div>
-
-                        <div
-                            class="relative z-10 h-4 md:h-5 w-full bg-gray-200/50 dark:bg-gray-700/50 rounded-full overflow-hidden mt-6 p-[3px]">
-                            <div id="progressBar"
-                                class="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full w-0 transition-all duration-[1.5s] ease-out relative shadow-sm">
-                                <div class="absolute top-0 left-0 w-full h-full bg-white/20 animate-pulse rounded-full">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="alertBox"
-                            class="relative z-10 hidden mt-6 bg-red-500/10 dark:bg-red-500/20 border border-red-500/20 dark:border-red-500/30 p-4 rounded-2xl flex items-center gap-3 backdrop-blur-md">
-                            <div class="bg-red-500 text-white p-2 rounded-full shrink-0 shadow-md"><i
-                                    class="ph-bold ph-warning text-lg"></i></div>
-                            <p class="text-red-600 dark:text-red-300 text-sm font-bold leading-tight">Cairan hampir
-                                habis, harap isi ulang.</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                        <div
-                            class="apple-card p-6 transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] cursor-default">
-                            <div
-                                class="w-12 h-12 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4">
-                                <i class="ph ph-hand-soap text-2xl"></i>
-                            </div>
-                            <p class="text-[11px] font-bold uppercase text-gray-500 dark:text-gray-400 tracking-widest">
-                                Total Pakai</p>
-                            <p id="valCount"
-                                class="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white mt-1 tracking-tight">
-                                --</p>
-                        </div>
-
-                        <div
-                            class="apple-card p-6 transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] cursor-default">
-                            <div
-                                class="w-12 h-12 bg-orange-500/10 dark:bg-orange-500/20 rounded-2xl flex items-center justify-center text-orange-600 dark:text-orange-400 mb-4">
-                                <i class="ph ph-coins text-2xl"></i>
-                            </div>
-                            <p class="text-[11px] font-bold uppercase text-gray-500 dark:text-gray-400 tracking-widest">
-                                Estimasi Biaya</p>
-                            <p id="valCost"
-                                class="text-2xl md:text-3xl font-extrabold text-blue-600 dark:text-blue-400 mt-1 tracking-tight truncate">
-                                Rp 0</p>
-                        </div>
-
-                        <div
-                            class="apple-card p-6 transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] cursor-default">
-                            <div
-                                class="w-12 h-12 bg-purple-500/10 dark:bg-purple-500/20 rounded-2xl flex items-center justify-center text-purple-600 dark:text-purple-400 mb-4">
-                                <i class="ph ph-hourglass text-2xl"></i>
-                            </div>
-                            <p class="text-[11px] font-bold uppercase text-gray-500 dark:text-gray-400 tracking-widest">
-                                Prediksi Habis</p>
-                            <p id="valForecastCard"
-                                class="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white mt-1 tracking-tight truncate">
-                                Menghitung...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="md:col-span-1 relative">
-                    <a href="/api/download_report" target="_blank"
-                        class="hidden md:flex w-full mb-6 bg-gray-900/80 dark:bg-white/90 text-white dark:text-gray-900 p-4 rounded-full justify-center items-center gap-3 font-bold hover:bg-gray-800 dark:hover:bg-white transition shadow-lg backdrop-blur-md active:scale-95">
-                        <i class="ph-bold ph-file-pdf text-lg"></i> Download Laporan
-                    </a>
-
-                    <div id="historyPanel"
-                        class="panel-history apple-card md:h-[580px] md:flex md:flex-col transition-all duration-500">
-                        <div class="md:hidden flex justify-center pt-4 pb-2">
-                            <div class="w-12 h-1.5 bg-gray-300/50 dark:bg-gray-600/50 rounded-full backdrop-blur-md">
-                            </div>
-                        </div>
-                        <div
-                            class="flex justify-between items-center px-6 py-5 md:p-6 border-b border-gray-200/50 dark:border-gray-700/50">
-                            <h2 class="font-extrabold text-xl text-gray-900 dark:text-white tracking-tight">Aktivitas
-                            </h2>
-                            <button onclick="toggleHistory(false)"
-                                class="md:hidden bg-gray-100/50 dark:bg-gray-700/50 p-2 rounded-full text-gray-500 dark:text-gray-400 backdrop-blur-md">
-                                <i class="ph-bold ph-x"></i>
-                            </button>
-                        </div>
-                        <div class="px-6 py-6 border-b border-gray-200/50 dark:border-gray-700/50">
-                            <div class="h-40 w-full">
-                                <canvas id="usageChart"></canvas>
-                            </div>
-                        </div>
-                        <div id="historyList"
-                            class="flex-1 overflow-y-auto px-4 md:px-4 space-y-2 py-4 custom-scrollbar"></div>
-                    </div>
-                </div>
-            </div>
+            <button onclick="openModal()"
+                class="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-5 py-2.5 rounded-xl font-medium shadow-sm flex justify-center items-center gap-2 transition-all active:scale-95">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Menu Admin</span>
+            </button>
         </div>
 
-        <div class="mobile-nav fixed bottom-0 left-0 w-full z-40 md:hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+
             <div
-                class="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-t border-gray-200/50 dark:border-gray-800/50 h-20 flex items-center justify-around px-6 pb-4">
-                <button onclick="toggleHistory(false)"
-                    class="flex flex-col items-center gap-1 text-blue-600 dark:text-blue-500 w-1/2 active:scale-90 transition">
-                    <i class="ph-fill ph-house text-2xl"></i>
-                    <span class="text-[10px] font-medium">Home</span>
-                </button>
-                <button onclick="toggleHistory(true)"
-                    class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-blue-500 w-1/2 active:scale-90 transition">
-                    <i class="ph ph-chart-bar text-2xl"></i>
-                    <span class="text-[10px] font-medium">Riwayat</span>
-                </button>
+                class="md:col-span-2 bg-white rounded-[20px] sm:rounded-[30px] p-6 sm:p-8 shadow-sm border border-slate-100 flex flex-col items-center relative overflow-hidden">
+
+                <div class="w-full flex justify-start mb-6">
+                    <h2 class="text-base sm:text-lg font-bold text-slate-700 flex items-center gap-2">
+                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                            <i class="fa-solid fa-droplet"></i>
+                        </div>
+                        Status Cairan
+                    </h2>
+                </div>
+
+                <div class="relative w-48 h-48 sm:w-64 sm:h-64 rounded-full flex flex-col items-center justify-center shadow-inner mb-6 progress-ring"
+                    id="progress-ring" style="--percent: 0; --color: #3B82F6;">
+                    <div
+                        class="w-36 h-36 sm:w-52 sm:h-52 bg-white rounded-full flex flex-col items-center justify-center shadow-lg z-10">
+                        <span id="level-text"
+                            class="text-4xl sm:text-6xl font-bold text-blue-600 tracking-tighter">0%</span>
+                        <span id="status-label"
+                            class="text-slate-400 text-xs sm:text-sm font-medium mt-1">Loading...</span>
+                    </div>
+                </div>
+
+                <div
+                    class="text-center z-10 bg-slate-50 px-5 py-2 rounded-full border border-slate-200 w-full sm:w-auto">
+                    <p class="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-0.5">Volume</p>
+                    <h3 id="volume-text" class="text-lg sm:text-xl font-bold text-slate-700">0 / 0 ml</h3>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4 sm:gap-6">
+
+                <div
+                    class="bg-white rounded-[20px] sm:rounded-[30px] p-6 shadow-sm border border-slate-100 flex-1 flex flex-col justify-center relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm sm:text-base font-bold text-slate-600">Estimasi Habis</h3>
+                        <div
+                            class="w-10 h-10 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center text-lg">
+                            <i class="fa-regular fa-calendar"></i>
+                        </div>
+                    </div>
+                    <h2 id="est-text" class="text-3xl sm:text-4xl font-bold text-slate-800 mb-1">-</h2>
+                    <p class="text-slate-400 text-xs">Hari lagi (Prediksi)</p>
+                </div>
+
+                <div
+                    class="bg-white rounded-[20px] sm:rounded-[30px] p-6 shadow-sm border border-slate-100 flex-1 flex flex-col justify-center relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm sm:text-base font-bold text-slate-600">Total Pemakaian</h3>
+                        <div
+                            class="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-hand-holding-droplet"></i>
+                        </div>
+                    </div>
+                    <h2 id="usage-text" class="text-3xl sm:text-4xl font-bold text-slate-800 mb-1">0</h2>
+                    <p class="text-slate-400 text-xs">Kali dispense total</p>
+                </div>
+
             </div>
         </div>
 
-        <div id="settingsModal"
-            class="fixed inset-0 z-[100] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
-            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeSettings()"></div>
+        <div
+            class="bg-white p-6 sm:p-8 rounded-[20px] sm:rounded-[30px] shadow-sm border border-slate-100 overflow-hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-base sm:text-lg font-bold text-slate-700 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-bar text-slate-400"></i> Riwayat
+                </h3>
+                <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">7 Hari</span>
+            </div>
 
-            <div class="relative apple-card bg-white dark:bg-gray-900 w-full max-w-sm p-8 transform scale-95 transition-transform duration-300"
-                id="modalCard">
-                <div class="flex justify-between items-center mb-8">
-                    <h2 class="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">Pengaturan</h2>
-                    <button onclick="closeSettings()"
-                        class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full text-gray-500 hover:bg-gray-200 transition">
-                        <i class="ph-bold ph-x"></i>
-                    </button>
-                </div>
-
-                <div class="space-y-6">
-                    <div>
-                        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-widest block mb-3">Harga
-                            Refill (Per Liter)</label>
-                        <div class="relative">
-                            <span class="absolute left-4 top-3.5 text-gray-400 font-bold">Rp</span>
-                            <input type="number" id="inputHarga"
-                                class="w-full bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white pl-12 pr-4 py-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-lg shadow-inner transition"
-                                placeholder="20000">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label
-                            class="text-[11px] font-bold text-gray-500 uppercase tracking-widest block mb-3">Kapasitas
-                            Botol (ml)</label>
-                        <div class="relative">
-                            <input type="number" id="inputKapasitas"
-                                class="w-full bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white px-4 py-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-lg shadow-inner transition"
-                                placeholder="500">
-                            <span class="absolute right-4 top-3.5 text-gray-400 font-bold text-sm">ml</span>
-                        </div>
-                    </div>
-                </div>
-
-                <button onclick="saveSettings()"
-                    class="w-full mt-10 bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-500/30 transition active:scale-95 flex justify-center items-center gap-2">
-                    <i class="ph-bold ph-floppy-disk"></i> Simpan Perubahan
-                </button>
+            <div class="relative w-full h-60 sm:h-72">
+                <canvas id="historyChart"></canvas>
             </div>
         </div>
 
     </div>
 
+    <div id="settingsModal"
+        class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center transition-opacity duration-300">
+        <div
+            class="bg-white w-full sm:w-[450px] rounded-t-[30px] sm:rounded-[30px] shadow-2xl p-6 sm:p-8 relative animate-slide-up sm:animate-fade-in max-h-[90vh] overflow-y-auto">
+
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-bold text-slate-800">⚙️ Konfigurasi</h2>
+                <button onclick="closeModal()"
+                    class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Kapasitas Botol (ml)</label>
+                    <input type="number" id="inputKapasitas"
+                        class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-slate-700"
+                        placeholder="1000">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Vol/Pump (ml)</label>
+                        <input type="number" id="inputPerPump" step="0.1"
+                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-slate-700"
+                            placeholder="1.5">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Harga/L (Rp)</label>
+                        <input type="number" id="inputHarga"
+                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-slate-700"
+                            placeholder="20000">
+                    </div>
+                </div>
+
+                <button onclick="saveSettings()"
+                    class="w-full py-3.5 bg-blue-600 active:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition transform active:scale-95">
+                    Simpan Setting
+                </button>
+
+                <div class="border-t border-slate-100 my-2"></div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="downloadReport()"
+                        class="py-3 bg-slate-800 active:bg-slate-900 text-white text-sm font-bold rounded-xl flex flex-col items-center gap-1">
+                        <i class="fa-solid fa-file-pdf text-lg"></i> Laporan
+                    </button>
+                    <button onclick="doRefill()"
+                        class="py-3 bg-white border border-red-100 text-red-500 active:bg-red-50 text-sm font-bold rounded-xl flex flex-col items-center gap-1">
+                        <i class="fa-solid fa-rotate-right text-lg"></i> Reset Isi
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="js/dashboard.js"></script>
-    <script src="js/history.js"></script>
 
     <script>
-        // === LOGIKA TEMA & UI ===
-        function toggleDarkMode() {
-            const html = document.documentElement;
-            const isDark = html.classList.contains('dark');
-            if (isDark) {
-                html.classList.remove('dark'); localStorage.setItem('theme', 'light'); updateIcons('moon');
-            } else {
-                html.classList.add('dark'); localStorage.setItem('theme', 'dark'); updateIcons('sun');
-            }
-            if (typeof loadHistory === 'function') loadHistory();
-        }
-        function updateIcons(iconType) {
-            const icon = iconType === 'moon' ? 'ph-moon' : 'ph-sun';
-            const color = iconType === 'moon' ? 'text-gray-600' : 'text-yellow-400';
-            document.getElementById('themeIcon').className = `ph-fill ${icon} text-xl ${color} dark:${color}`;
-            document.getElementById('themeIconMobile').className = `ph-fill ${icon} text-xl ${color} dark:${color}`;
-        }
-        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark'); updateIcons('sun');
-        } else {
-            document.documentElement.classList.remove('dark'); updateIcons('moon');
-        }
-        const originalToggle = toggleHistory;
-        toggleHistory = function (show) {
-            const backdrop = document.getElementById('backdrop');
-            const panel = document.getElementById('historyPanel');
-            if (show) {
-                panel.classList.add('panel-visible'); backdrop.classList.add('show'); loadHistory();
-            } else {
-                panel.classList.remove('panel-visible'); backdrop.classList.remove('show');
-            }
-        }
+        // Animasi Modal Sederhana
+        const modal = document.getElementById('settingsModal');
+        function openModal() { modal.classList.remove('hidden'); }
+        function closeModal() { modal.classList.add('hidden'); }
+        window.onclick = (e) => { if (e.target == modal) closeModal(); }
     </script>
+
+    <style>
+        /* Animasi Slide Up untuk Mobile */
+        @keyframes slide-up {
+            from {
+                transform: translateY(100%);
+            }
+
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .animate-slide-up {
+            animation: slide-up 0.3s ease-out;
+        }
+    </style>
 </body>
 
 </html>

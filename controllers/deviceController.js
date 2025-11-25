@@ -1,119 +1,140 @@
 const db = require("../config/database");
 const moment = require("moment");
 
-exports.saveData = (req, res) => {
-  // ... (LOGIKA SAVE DATA SAMA SEPERTI SEBELUMNYA, TIDAK BERUBAH) ...
-  // Copy paste bagian saveData dari versi sebelumnya
-  const { sisa, count, custom_date } = req.body;
-  const device_id = "esp32-01";
+const DEVICE_ID = "1";
+
+// 1. HANDLE DISPENSE (Laporan dari ESP32)
+exports.handleDispense = (req, res) => {
+  const id_alat = req.params.id || DEVICE_ID;
 
   db.query(
     "SELECT * FROM devices WHERE device_id = ?",
-    [device_id],
-    (err, result) => {
-      if (err) return res.status(500).json({ error: err });
+    [id_alat],
+    (err, results) => {
+      if (err || results.length === 0) return res.json({});
 
-      const oldData = result[0];
-      const oldLevel = oldData ? oldData.current_level : 100;
-      const oldCount = oldData ? oldData.total_usage_recorded : count;
-      const price = oldData ? oldData.price_per_liter : 20000;
+      const device = results[0];
 
-      if (oldLevel - sisa > 5 && count === oldCount) {
-        console.log("⚠️ ANOMALI TERDETEKSI!");
-        db.query(
-          "INSERT INTO events (device_id, event_type, description) VALUES (?, 'ANOMALY', ?)",
-          [
-            device_id,
-            `Level turun ${oldLevel}% -> ${sisa}% tanpa aktivitas pump.`,
-          ]
-        );
+      // Jika status LOCKED (0), jangan kurangi stok (abaikan laporan)
+      if (device.is_active === 0) {
+        return res.json({ status: "ignored", msg: "Device is locked" });
       }
 
+      let newVolume =
+        parseFloat(device.current_volume_ml) -
+        parseFloat(device.volume_per_pump_ml);
+      if (newVolume < 0) newVolume = 0;
+      const newPercent = (newVolume / device.tank_capacity_ml) * 100;
+      const newCount = device.total_usage_recorded + 1;
+
       db.query(
-        "UPDATE devices SET current_level = ?, total_usage_recorded = ?, last_update = NOW() WHERE device_id = ?",
-        [sisa, count, device_id]
+        "UPDATE devices SET current_volume_ml=?, current_level=?, total_usage_recorded=?, last_update=NOW() WHERE device_id=?",
+        [newVolume, newPercent, newCount, id_alat],
+        () => {
+          // Catat History
+          const today = moment().format("YYYY-MM-DD");
+          const cost =
+            ((device.price_per_liter || 0) / 1000) * device.volume_per_pump_ml;
+
+          const sqlHistory = `INSERT INTO daily_logs (device_id, log_date, total_usage, estimated_cost) VALUES (?, ?, 1, ?) 
+                            ON DUPLICATE KEY UPDATE total_usage = total_usage + 1, estimated_cost = estimated_cost + ?`;
+
+          db.query(sqlHistory, [id_alat, today, cost, cost]);
+          res.json({ status: "success" });
+        }
       );
-
-      let logDate = custom_date
-        ? moment(custom_date).format("YYYY-MM-DD")
-        : moment().format("YYYY-MM-DD");
-      const mlPerPump = 2.0;
-      const mlUsed = count * mlPerPump;
-      const cost = (mlUsed / 1000) * price;
-
-      const sqlHistory = `
-            INSERT INTO daily_logs (device_id, log_date, total_usage, total_ml_used, estimated_cost)
-            VALUES (?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE total_usage = VALUES(total_usage), estimated_cost = VALUES(estimated_cost)
-        `;
-
-      db.query(sqlHistory, [device_id, logDate, count, mlUsed, cost]);
-      res.json({ status: "success", received_date: logDate });
     }
   );
 };
 
-/* --- MODIFIKASI: GET LATEST DATA --- */
+// 2. GET DATA (Diakses oleh Dashboard & ESP32)
 exports.getLatestData = (req, res) => {
-  const device_id = "esp32-01";
+  db.query(
+    "SELECT * FROM devices WHERE device_id = ?",
+    [DEVICE_ID],
+    (err, results) => {
+      if (err || results.length === 0) return res.json({});
 
-  // Tambahkan kolom config ke query
-  const sqlDevice = `
-        SELECT d.current_level, d.tank_capacity_ml, d.price_per_liter,
-               l.total_usage, l.estimated_cost
-        FROM devices d 
-        LEFT JOIN daily_logs l ON d.device_id = l.device_id AND l.log_date = CURDATE()
-        WHERE d.device_id = ?`;
+      const data = results[0];
 
-  const sqlAvg = `
-        SELECT AVG(total_usage) as avg_usage 
-        FROM daily_logs 
-        WHERE device_id = ? AND log_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-    `;
+      // Logika Estimasi
+      db.query(
+        `SELECT AVG(total_usage) as avg FROM daily_logs WHERE device_id = ?`,
+        [DEVICE_ID],
+        (e, rAvg) => {
+          const avg = rAvg[0].avg || 50;
+          const mlDay = avg * data.volume_per_pump_ml;
+          let daysLeft =
+            mlDay > 0 ? Math.ceil(data.current_volume_ml / mlDay) : "-";
 
-  db.query(sqlDevice, [device_id], (err, resDevice) => {
-    if (err) return res.status(500).json({ error: err });
+          res.json({
+            sisa_cairan: data.current_level,
+            volume: data.current_volume_ml,
+            count: data.total_usage_recorded,
+            estimasi: daysLeft,
+            last_update: data.last_update,
+            // INFO PENTING UTK ESP32
+            is_active: data.is_active, // Status Kunci
+            command: data.pending_command, // Perintah Pump
 
-    db.query(sqlAvg, [device_id], (err2, resAvg) => {
-      const data = resDevice[0] || {};
-      const avgUsage = resAvg[0].avg_usage || 10;
+            config: {
+              kapasitas: data.tank_capacity_ml,
+              per_pump: data.volume_per_pump_ml,
+              harga: data.price_per_liter,
+            },
+          });
 
-      const dropPerPump = (2.0 / (data.tank_capacity_ml || 500)) * 100;
-      const safeAvgUsage = avgUsage < 1 ? 1 : avgUsage;
-      const dailyDropPercent = safeAvgUsage * dropPerPump;
-
-      let daysLeft = 0;
-      if (dailyDropPercent > 0) {
-        daysLeft = Math.ceil(data.current_level / dailyDropPercent);
-      }
-      if (data.current_level > 20 && daysLeft < 1) daysLeft = 1;
-
-      res.json({
-        sisa_cairan: data.current_level || 0,
-        jumlah_pakai: data.total_usage || 0,
-        biaya_hari_ini: data.estimated_cost || 0,
-        estimasi_hari: daysLeft,
-        // Kirim config ke frontend
-        config: {
-          harga: data.price_per_liter,
-          kapasitas: data.tank_capacity_ml,
-        },
-      });
-    });
-  });
+          // BERSIHKAN PERINTAH SETELAH DIAMBIL (Supaya gak mompa terus)
+          if (data.pending_command) {
+            db.query(
+              "UPDATE devices SET pending_command = NULL WHERE device_id = ?",
+              [DEVICE_ID]
+            );
+          }
+        }
+      );
+    }
+  );
 };
 
-/* --- MODIFIKASI: UPDATE SETTINGS --- */
+// 3. FITUR LOCK / UNLOCK (Baru)
+exports.toggleLock = (req, res) => {
+  const { status } = req.body; // 1 = Unlock, 0 = Lock
+  db.query(
+    "UPDATE devices SET is_active = ? WHERE device_id = ?",
+    [status, DEVICE_ID],
+    (err) => {
+      if (err) return res.status(500).send(err);
+      res.json({ status: "success", new_state: status });
+    }
+  );
+};
+
+// 4. FITUR PUMP NOW (Baru)
+exports.triggerPump = (req, res) => {
+  db.query(
+    "UPDATE devices SET pending_command = 'PUMP' WHERE device_id = ?",
+    [DEVICE_ID],
+    (err) => {
+      if (err) return res.status(500).send(err);
+      res.json({ status: "success" });
+    }
+  );
+};
+
+// 5. REFILL & 6. SETTINGS (Sama seperti sebelumnya)
+exports.refillDevice = (req, res) => {
+  db.query(
+    "UPDATE devices SET current_volume_ml = tank_capacity_ml, current_level = 100 WHERE device_id = ?",
+    [DEVICE_ID],
+    () => res.json({ status: "success" })
+  );
+};
 exports.updateSettings = (req, res) => {
-  const { harga, kapasitas } = req.body;
-  const device_id = "esp32-01";
-
-  const sql =
-    "UPDATE devices SET price_per_liter = ?, tank_capacity_ml = ? WHERE device_id = ?";
-
-  db.query(sql, [harga, kapasitas, device_id], (err, result) => {
-    if (err)
-      return res.status(500).json({ status: "error", message: err.message });
-    res.json({ status: "success", message: "Konfigurasi disimpan" });
-  });
+  const { kapasitas, per_pump, harga } = req.body;
+  db.query(
+    "UPDATE devices SET tank_capacity_ml=?, volume_per_pump_ml=?, price_per_liter=?, current_level=(current_volume_ml/?)*100 WHERE device_id=?",
+    [kapasitas, per_pump, harga, kapasitas, DEVICE_ID],
+    () => res.json({ status: "success" })
+  );
 };

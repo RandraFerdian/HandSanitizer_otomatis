@@ -1,130 +1,189 @@
-/* =========================================
-   MODULE: DASHBOARD CONTROLLER
-   Fungsi: Mengatur data realtime & modal settings
-   ========================================= */
+const API_URL = "/api"; //ganti menjadi ip laptop
 
-async function fetchDashboard() {
+// Variabel global untuk Chart agar bisa di-update
+let historyChart = null;
+
+// 1. FUNGSI UTAMA: Mengambil data Real-time
+async function fetchData() {
   try {
-    const res = await fetch("/api/get_latest");
-    const data = await res.json();
+    const response = await fetch(`${API_URL}/get_latest`);
+    const data = await response.json();
 
-    // 1. Update Angka Monitoring
-    document.getElementById("valSisa").innerText =
-      (data.sisa_cairan || 0) + "%";
-    document.getElementById("valCount").innerText = data.jumlah_pakai || 0;
-    document.getElementById("valCost").innerText =
-      "Rp " + parseInt(data.biaya_hari_ini || 0).toLocaleString("id-ID");
+    if (data && data.config) {
+      // A. Update Lingkaran Persentase
+      const persen = Math.round(data.sisa_cairan);
+      const levelText = document.getElementById("level-text");
+      const ring = document.getElementById("progress-ring");
+      const statusLabel = document.getElementById("status-label");
 
-    // 2. Update Progress Bar
-    const bar = document.getElementById("progressBar");
-    bar.style.width = (data.sisa_cairan || 0) + "%";
+      levelText.innerText = persen + "%";
+      ring.style.setProperty("--percent", persen);
 
-    // 3. Logika Kartu Forecasting
-    const forecastEl = document.getElementById("valForecastCard");
-    const daysLeft = parseInt(data.estimasi_hari);
+      // Logika Warna: Merah jika < 20%, Biru jika aman
+      if (persen <= 20) {
+        levelText.className =
+          "text-6xl font-bold text-red-500 tracking-tighter";
+        ring.style.setProperty("--color", "#EF4444"); // Merah Tailwind
+        statusLabel.innerText = "Segera Isi Ulang!";
+        statusLabel.className =
+          "text-red-400 text-sm font-bold mt-1 animate-pulse";
+      } else {
+        levelText.className =
+          "text-6xl font-bold text-blue-600 tracking-tighter";
+        ring.style.setProperty("--color", "#3B82F6"); // Biru Tailwind
+        statusLabel.innerText = "Kondisi Aman";
+        statusLabel.className = "text-slate-400 text-sm font-medium mt-1";
+      }
 
-    if (isNaN(daysLeft)) {
-      forecastEl.innerText = "Menghitung...";
-      forecastEl.className =
-        "text-xl md:text-2xl font-extrabold text-gray-400 mt-1 tracking-tight truncate";
-    } else if (daysLeft > 30) {
-      forecastEl.innerText = "> 1 Bulan";
-      forecastEl.className =
-        "text-xl md:text-2xl font-extrabold text-green-600 dark:text-green-400 mt-1 tracking-tight truncate";
-    } else if (daysLeft > 5) {
-      forecastEl.innerText = daysLeft + " Hari Lagi";
-      forecastEl.className =
-        "text-xl md:text-2xl font-extrabold text-purple-600 dark:text-purple-400 mt-1 tracking-tight truncate";
-    } else if (daysLeft > 0) {
-      forecastEl.innerText = daysLeft + " Hari (Kritis)";
-      forecastEl.className =
-        "text-xl md:text-2xl font-extrabold text-orange-500 animate-pulse mt-1 tracking-tight truncate";
-    } else {
-      forecastEl.innerText = "Habis Hari Ini";
-      forecastEl.className =
-        "text-xl md:text-2xl font-extrabold text-red-500 animate-pulse mt-1 tracking-tight truncate";
+      // B. Update Teks Volume
+      const sisa = parseFloat(data.volume).toFixed(0);
+      const total = data.config.kapasitas;
+      document.getElementById(
+        "volume-text"
+      ).innerText = `${sisa} / ${total} ml`;
+
+      // C. Update Estimasi
+      // Jika estimasi 0 atau minus, tampilkan tanda strip
+      const estimasi = data.estimasi > 0 ? data.estimasi : "-";
+      document.getElementById("est-text").innerText = estimasi;
+
+      // D. Update Total Counter
+      document.getElementById("usage-text").innerText = data.count;
+
+      // E. Isi Form Modal (Hanya jika user tidak sedang mengetik)
+      if (document.activeElement.tagName !== "INPUT") {
+        document.getElementById("inputKapasitas").value = data.config.kapasitas;
+        document.getElementById("inputPerPump").value = data.config.per_pump;
+        document.getElementById("inputHarga").value = data.config.harga;
+      }
     }
-
-    // 4. Alert Level
-    if ((data.sisa_cairan || 0) <= 20) {
-      document.getElementById("alertBox").classList.remove("hidden");
-      bar.classList.remove("from-blue-500", "to-blue-400");
-      bar.classList.add("from-red-500", "to-red-400");
-    } else {
-      document.getElementById("alertBox").classList.add("hidden");
-      bar.classList.add("from-blue-500", "to-blue-400");
-      bar.classList.remove("from-red-500", "to-red-400");
-    }
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    console.error("Gagal mengambil data:", error);
   }
 }
 
-// --- SETTINGS MODAL LOGIC ---
-const modal = document.getElementById("settingsModal");
-const modalCard = document.getElementById("modalCard");
+// 2. FUNGSI MEMUAT GRAFIK (Chart.js)
+async function loadHistoryChart() {
+  try {
+    const response = await fetch(`${API_URL}/get_history`);
+    const historyData = await response.json();
 
-function openSettings() {
-  modal.classList.remove("opacity-0", "pointer-events-none");
-  modalCard.classList.remove("scale-95");
-  modalCard.classList.add("scale-100");
+    const ctx = document.getElementById("historyChart").getContext("2d");
 
-  // Ambil config saat ini
-  fetch("/api/get_latest")
-    .then((res) => res.json())
-    .then((data) => {
-      if (data.config) {
-        document.getElementById("inputHarga").value = data.config.harga;
-        document.getElementById("inputKapasitas").value = data.config.kapasitas;
-      }
+    // Hapus chart lama sebelum gambar baru (agar tidak tumpang tindih)
+    if (historyChart) {
+      historyChart.destroy();
+    }
+
+    historyChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: historyData.labels, // Tanggal
+        datasets: [
+          {
+            label: "Kali Dispense",
+            data: historyData.data, // Jumlah Pakai
+            backgroundColor: "#3B82F6", // Warna Biru
+            borderRadius: 8, // Sudut tumpul batang
+            barThickness: 25, // Ketebalan batang
+            hoverBackgroundColor: "#2563EB",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }, // Sembunyikan legenda
+          tooltip: {
+            backgroundColor: "#1E293B",
+            padding: 12,
+            cornerRadius: 8,
+            displayColors: false,
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: "#F1F5F9", borderDash: [5, 5] }, // Garis putus-putus halus
+            ticks: { font: { family: "Poppins" }, color: "#94A3B8" },
+            border: { display: false },
+          },
+          x: {
+            grid: { display: false },
+            ticks: { font: { family: "Poppins" }, color: "#64748B" },
+            border: { display: false },
+          },
+        },
+      },
     });
+  } catch (error) {
+    console.error("Gagal load grafik:", error);
+  }
 }
 
-function closeSettings() {
-  modal.classList.add("opacity-0", "pointer-events-none");
-  modalCard.classList.remove("scale-100");
-  modalCard.classList.add("scale-95");
+// 3. FUNGSI TOMBOL AKSI
+async function doRefill() {
+  if (
+    confirm("Apakah Anda yakin sudah mengisi botol sampai penuh? (Reset 100%)")
+  ) {
+    await fetch(`${API_URL}/refill`, { method: "POST" });
+    alert("Berhasil Reset!");
+    closeModal();
+    fetchData(); // Refresh data
+  }
 }
 
 async function saveSettings() {
-  const harga = document.getElementById("inputHarga").value;
   const kapasitas = document.getElementById("inputKapasitas").value;
+  const per_pump = document.getElementById("inputPerPump").value;
+  const harga = document.getElementById("inputHarga").value;
 
-  if (!harga || !kapasitas) {
-    alert("Harap isi semua kolom!");
-    return;
-  }
+  await fetch(`${API_URL}/update_settings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kapasitas, per_pump, harga }),
+  });
 
-  try {
-    const res = await fetch("/api/update_settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ harga, kapasitas }),
-    });
-
-    const result = await res.json();
-    if (result.status === "success") {
-      // Animasi Tombol Sukses
-      const btn = document.querySelector(
-        '#settingsModal button[onclick="saveSettings()"]'
-      );
-      const oriHTML = btn.innerHTML;
-      btn.innerHTML = `<i class="ph-bold ph-check-circle text-xl"></i> Berhasil Disimpan!`;
-      btn.classList.replace("bg-blue-600", "bg-green-500");
-
-      setTimeout(() => {
-        closeSettings();
-        btn.innerHTML = oriHTML;
-        btn.classList.replace("bg-green-500", "bg-blue-600");
-        fetchDashboard(); // Refresh data
-      }, 1200);
-    } else {
-      alert("Gagal: " + result.message);
-    }
-  } catch (e) {
-    alert("Error koneksi ke server");
-  }
+  alert("Pengaturan Disimpan!");
+  closeModal();
+  fetchData();
 }
 
-setInterval(fetchDashboard, 2000);
-fetchDashboard();
+function downloadReport() {
+  window.open(`${API_URL}/download_report`, "_blank");
+}
+
+// 4. LOGIKA MODAL POPUP
+const modal = document.getElementById("settingsModal");
+const modalContent = modal.querySelector("div");
+
+function openModal() {
+  modal.classList.remove("hidden");
+  setTimeout(() => {
+    modal.classList.remove("opacity-0");
+    modalContent.classList.remove("scale-95");
+    modalContent.classList.add("scale-100");
+  }, 10);
+}
+
+function closeModal() {
+  modal.classList.add("opacity-0");
+  modalContent.classList.remove("scale-100");
+  modalContent.classList.add("scale-95");
+  setTimeout(() => {
+    modal.classList.add("hidden");
+  }, 300);
+}
+
+// Tutup modal jika klik area gelap di luar
+window.onclick = function (event) {
+  if (event.target == modal) {
+    closeModal();
+  }
+};
+
+// 5. JALANKAN OTOMATIS
+loadHistoryChart(); // Gambar grafik saat pertama buka
+setInterval(fetchData, 2000); // Update data angka tiap 2 detik
+fetchData(); // Panggil sekali di awal
