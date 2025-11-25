@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Monitor</title>
+    <title>Smart Monitor Dashboard</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -20,7 +20,7 @@
             theme: {
                 extend: {
                     fontFamily: { sans: ['Poppins', 'sans-serif'] },
-                    colors: { primary: '#3B82F6', bg: '#F1F5F9' }
+                    colors: { primary: '#3B82F6', bg: '#F8FAFC' }
                 }
             }
         }
@@ -31,104 +31,89 @@
             transition: background 0.5s ease;
         }
 
-        /* Fix untuk tampilan mobile agar tidak goyang */
-        body {
-            -webkit-tap-highlight-color: transparent;
+        .animate-slide-up {
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
     </style>
 </head>
 
-<body class="bg-bg text-slate-800 min-h-screen py-6 px-4 sm:py-10 sm:px-8 flex flex-col">
+<body class="bg-bg text-slate-800 min-h-screen py-8 px-4 sm:px-8 flex flex-col">
 
-    <div class="max-w-5xl w-full mx-auto space-y-6 sm:space-y-8">
+    <div class="max-w-5xl w-full mx-auto space-y-6">
 
-        <div
-            class="flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left bg-white p-4 rounded-2xl shadow-sm sm:bg-transparent sm:shadow-none sm:p-0">
+        <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
             <div>
-                <h1 class="text-2xl sm:text-3xl font-bold text-slate-900">Dashboard</h1>
-                <p class="text-slate-500 text-xs sm:text-sm mt-1">Monitoring Hand Sanitizer</p>
+                <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
+                <div class="flex items-center gap-2 mt-1">
+                    <div id="status-dot" class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                    <p id="status-text-header" class="text-slate-500 text-xs font-medium">Online</p>
+                </div>
             </div>
-
             <button onclick="openModal()"
-                class="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-5 py-2.5 rounded-xl font-medium shadow-sm flex justify-center items-center gap-2 transition-all active:scale-95">
-                <i class="fa-solid fa-sliders"></i>
-                <span>Menu Admin</span>
+                class="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition">
+                <i class="fa-solid fa-sliders"></i> Kontrol
             </button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
             <div
-                class="md:col-span-2 bg-white rounded-[20px] sm:rounded-[30px] p-6 sm:p-8 shadow-sm border border-slate-100 flex flex-col items-center relative overflow-hidden">
-
-                <div class="w-full flex justify-start mb-6">
-                    <h2 class="text-base sm:text-lg font-bold text-slate-700 flex items-center gap-2">
-                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                            <i class="fa-solid fa-droplet"></i>
-                        </div>
-                        Status Cairan
-                    </h2>
+                class="md:col-span-2 bg-white rounded-[30px] p-8 shadow-sm border border-slate-100 flex flex-col items-center justify-center min-h-[350px] relative overflow-hidden">
+                <div class="absolute top-6 left-6">
+                    <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest">Sisa Cairan</h2>
                 </div>
 
-                <div class="relative w-48 h-48 sm:w-64 sm:h-64 rounded-full flex flex-col items-center justify-center shadow-inner mb-6 progress-ring"
+                <div class="relative w-56 h-56 rounded-full flex flex-col items-center justify-center shadow-inner mb-6 progress-ring"
                     id="progress-ring" style="--percent: 0; --color: #3B82F6;">
                     <div
-                        class="w-36 h-36 sm:w-52 sm:h-52 bg-white rounded-full flex flex-col items-center justify-center shadow-lg z-10">
-                        <span id="level-text"
-                            class="text-4xl sm:text-6xl font-bold text-blue-600 tracking-tighter">0%</span>
-                        <span id="status-label"
-                            class="text-slate-400 text-xs sm:text-sm font-medium mt-1">Loading...</span>
+                        class="w-44 h-44 bg-white rounded-full flex flex-col items-center justify-center shadow-xl z-10">
+                        <span id="level-text" class="text-5xl font-bold text-blue-600 tracking-tighter">0%</span>
+                        <span id="volume-text" class="text-slate-400 text-xs font-medium mt-1">0 / 0 ml</span>
                     </div>
-                </div>
-
-                <div
-                    class="text-center z-10 bg-slate-50 px-5 py-2 rounded-full border border-slate-200 w-full sm:w-auto">
-                    <p class="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-0.5">Volume</p>
-                    <h3 id="volume-text" class="text-lg sm:text-xl font-bold text-slate-700">0 / 0 ml</h3>
                 </div>
             </div>
 
-            <div class="flex flex-col gap-4 sm:gap-6">
-
+            <div class="flex flex-col gap-6">
                 <div
-                    class="bg-white rounded-[20px] sm:rounded-[30px] p-6 shadow-sm border border-slate-100 flex-1 flex flex-col justify-center relative group">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-sm sm:text-base font-bold text-slate-600">Estimasi Habis</h3>
-                        <div
-                            class="w-10 h-10 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center text-lg">
-                            <i class="fa-regular fa-calendar"></i>
-                        </div>
+                    class="bg-white rounded-[30px] p-6 shadow-sm border border-slate-100 flex-1 flex flex-col justify-center relative group">
+                    <div
+                        class="w-10 h-10 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center text-lg mb-3">
+                        <i class="fa-regular fa-calendar"></i>
                     </div>
-                    <h2 id="est-text" class="text-3xl sm:text-4xl font-bold text-slate-800 mb-1">-</h2>
-                    <p class="text-slate-400 text-xs">Hari lagi (Prediksi)</p>
+                    <h2 id="est-text" class="text-3xl font-bold text-slate-800">-</h2>
+                    <p class="text-slate-400 text-xs">Estimasi Habis (Hari)</p>
                 </div>
 
                 <div
-                    class="bg-white rounded-[20px] sm:rounded-[30px] p-6 shadow-sm border border-slate-100 flex-1 flex flex-col justify-center relative group">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-sm sm:text-base font-bold text-slate-600">Total Pemakaian</h3>
-                        <div
-                            class="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center text-lg">
-                            <i class="fa-solid fa-hand-holding-droplet"></i>
-                        </div>
+                    class="bg-white rounded-[30px] p-6 shadow-sm border border-slate-100 flex-1 flex flex-col justify-center relative group">
+                    <div
+                        class="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center text-lg mb-3">
+                        <i class="fa-solid fa-hand-holding-droplet"></i>
                     </div>
-                    <h2 id="usage-text" class="text-3xl sm:text-4xl font-bold text-slate-800 mb-1">0</h2>
-                    <p class="text-slate-400 text-xs">Kali dispense total</p>
+                    <h2 id="usage-text" class="text-3xl font-bold text-slate-800">0</h2>
+                    <p class="text-slate-400 text-xs">Total Pemakaian</p>
                 </div>
-
             </div>
         </div>
 
-        <div
-            class="bg-white p-6 sm:p-8 rounded-[20px] sm:rounded-[30px] shadow-sm border border-slate-100 overflow-hidden">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-base sm:text-lg font-bold text-slate-700 flex items-center gap-2">
-                    <i class="fa-solid fa-chart-bar text-slate-400"></i> Riwayat
-                </h3>
-                <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">7 Hari</span>
+        <div class="bg-white p-6 rounded-[30px] shadow-sm border border-slate-100">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-700">Riwayat 7 Hari</h3>
+                <span class="bg-blue-50 text-blue-600 text-[10px] font-bold px-3 py-1 rounded-full">LIVE</span>
             </div>
-
-            <div class="relative w-full h-60 sm:h-72">
+            <div class="relative w-full h-64">
                 <canvas id="historyChart"></canvas>
             </div>
         </div>
@@ -136,88 +121,70 @@
     </div>
 
     <div id="settingsModal"
-        class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center transition-opacity duration-300">
+        class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center opacity-0 transition-opacity duration-300 px-4">
         <div
-            class="bg-white w-full sm:w-[450px] rounded-t-[30px] sm:rounded-[30px] shadow-2xl p-6 sm:p-8 relative animate-slide-up sm:animate-fade-in max-h-[90vh] overflow-y-auto">
+            class="bg-white rounded-3xl shadow-2xl w-full max-w-md transform scale-95 transition-transform duration-300 p-6 relative overflow-hidden animate-slide-up">
 
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-bold text-slate-800">⚙️ Konfigurasi</h2>
+            <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                <h2 class="text-lg font-bold text-slate-800">Panel Kontrol</h2>
                 <button onclick="closeModal()"
-                    class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                    <i class="fa-solid fa-xmark"></i>
+                    class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button id="btn-lock" onclick="toggleLock()"
+                    class="py-4 bg-green-100 text-green-700 hover:bg-green-200 rounded-2xl font-bold flex flex-col items-center justify-center gap-1 transition">
+                    <i id="icon-lock" class="fa-solid fa-lock-open text-2xl mb-1"></i>
+                    <span id="text-lock" class="text-xs uppercase tracking-wide">Unlocked</span>
+                </button>
+
+                <button onclick="remotePump()"
+                    class="py-4 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-2xl font-bold flex flex-col items-center justify-center gap-1 transition active:scale-95">
+                    <i class="fa-solid fa-faucet-drip text-2xl mb-1"></i>
+                    <span class="text-xs uppercase tracking-wide">Pump Now</span>
                 </button>
             </div>
 
-            <div class="space-y-5">
+            <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Kapasitas Botol (ml)</label>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Kapasitas (ml)</label>
                     <input type="number" id="inputKapasitas"
-                        class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-slate-700"
-                        placeholder="1000">
+                        class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-slate-700">
                 </div>
-
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Vol/Pump (ml)</label>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Vol/Pump</label>
                         <input type="number" id="inputPerPump" step="0.1"
-                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-slate-700"
-                            placeholder="1.5">
+                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-slate-700">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Harga/L (Rp)</label>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Harga/L</label>
                         <input type="number" id="inputHarga"
-                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-slate-700"
-                            placeholder="20000">
+                            class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-slate-700">
                     </div>
                 </div>
 
                 <button onclick="saveSettings()"
-                    class="w-full py-3.5 bg-blue-600 active:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition transform active:scale-95">
-                    Simpan Setting
-                </button>
-
-                <div class="border-t border-slate-100 my-2"></div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="downloadReport()"
-                        class="py-3 bg-slate-800 active:bg-slate-900 text-white text-sm font-bold rounded-xl flex flex-col items-center gap-1">
-                        <i class="fa-solid fa-file-pdf text-lg"></i> Laporan
-                    </button>
-                    <button onclick="doRefill()"
-                        class="py-3 bg-white border border-red-100 text-red-500 active:bg-red-50 text-sm font-bold rounded-xl flex flex-col items-center gap-1">
-                        <i class="fa-solid fa-rotate-right text-lg"></i> Reset Isi
-                    </button>
-                </div>
+                    class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition shadow-lg">Simpan
+                    Konfigurasi</button>
             </div>
+
+            <div class="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-100">
+                <button onclick="downloadReport()"
+                    class="text-xs font-bold text-slate-500 hover:text-blue-600 flex items-center justify-center gap-2 py-2">
+                    <i class="fa-solid fa-file-pdf"></i> Laporan PDF
+                </button>
+                <button onclick="doRefill()"
+                    class="text-xs font-bold text-red-400 hover:text-red-600 flex items-center justify-center gap-2 py-2">
+                    <i class="fa-solid fa-rotate-right"></i> Reset Isi
+                </button>
+            </div>
+
         </div>
     </div>
 
     <script src="js/dashboard.js"></script>
-
-    <script>
-        // Animasi Modal Sederhana
-        const modal = document.getElementById('settingsModal');
-        function openModal() { modal.classList.remove('hidden'); }
-        function closeModal() { modal.classList.add('hidden'); }
-        window.onclick = (e) => { if (e.target == modal) closeModal(); }
-    </script>
-
-    <style>
-        /* Animasi Slide Up untuk Mobile */
-        @keyframes slide-up {
-            from {
-                transform: translateY(100%);
-            }
-
-            to {
-                transform: translateY(0);
-            }
-        }
-
-        .animate-slide-up {
-            animation: slide-up 0.3s ease-out;
-        }
-    </style>
 </body>
 
 </html>
